@@ -39,23 +39,29 @@ export const addTask = async (text) => {
   }
 };
 
-export const updateTask = async (id, text) => {
+export const updateTask = async (taskId, text) => {
+  console.log("📤 Sending update request:", { taskId, text });
+
   try {
-    const response = await fetch(`${API_URL}/${id}`, {
+    const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        ...getAuthHeaders(),
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text: text.title || text }), // 👈 Ensure text is a string
     });
+
     if (!response.ok) throw new Error("Failed to update task");
+
     return await response.json();
   } catch (error) {
-    console.error("❌ Error updating task:", error);
+    console.error("❌ Error updating task:", error.message);
     throw error;
   }
 };
+
+
 
 export const deleteTask = async (id) => {
   try {
