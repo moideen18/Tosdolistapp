@@ -1,29 +1,12 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import styles from "./HomePage.module.css"; 
+import Navbar from "../Navbar/Navbar";
+import styles from "./Home.css"; // Using CSS Modules
+// If you're not using CSS modules, simply import "./Home.css";
 
 function HomePage() {
   return (
     <div className={styles.homepage}>
-      <header className={styles.homepageHeader}>
-        <nav className={styles.navbar}>
-          <div className={styles.navbarLogo}>
-            <Link to="/">TODO LIST</Link>
-          </div>
-          <ul className={styles.navbarNav}>
-            <li>
-              <Link to="/" className={styles.navLink}>Home</Link>
-            </li>
-            <li>
-              <Link to="/register" className={styles.navLink}>Register</Link>
-            </li>
-            <li>
-              <Link to="/login" className={styles.navLink}>Login</Link>
-            </li>
-          </ul>
-        </nav>
-      </header>
-
+      <Navbar />
       <main>
         <section className={styles.hero}>
           <div className={styles.heroContent}>
@@ -33,7 +16,6 @@ function HomePage() {
             </p>
           </div>
         </section>
-
         <section className={styles.features}>
           <div className={styles.featuresContent}>
             <h2>Our Features</h2>
@@ -49,7 +31,6 @@ function HomePage() {
             </ul>
           </div>
         </section>
-
         <section className={styles.about}>
           <div className={styles.aboutContent}>
             <h2>About TODO-LIST</h2>
@@ -62,7 +43,6 @@ function HomePage() {
           </div>
         </section>
       </main>
-
       <footer className={styles.footer}>
         <p>&copy; {new Date().getFullYear()} MyProject. All Rights Reserved.</p>
       </footer>

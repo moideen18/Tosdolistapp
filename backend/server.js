@@ -1,12 +1,16 @@
+// server.js
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("dotenv").config();
+const dotenv = require("dotenv");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const authMiddleware = require("./middleware/auth.js"); 
+
+dotenv.config();
+
 const User = require("./models/user");
-const Task = require("./models/task");
+const authMiddleware = require("./middleware/auth");
+const tasksRoutes = require("./routes/tasks");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,7 +27,8 @@ mongoose
   .then(() => console.log("✅ Connected to MongoDB"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-app.post("/register", async (req, res) => {
+// ===== Registration Endpoint =====
+app.post("/api/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
@@ -43,9 +48,18 @@ app.post("/register", async (req, res) => {
     const newUser = new User({ name, email, password: hashedPassword });
     await newUser.save();
 
-    res
-      .status(201)
-      .json({ success: true, message: "Registration successful!" });
+    // Generate a JWT token for the new user
+    const token = jwt.sign({ userId: newUser._id }, JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
+    // Return token and userId along with the success message
+    res.status(201).json({
+      success: true,
+      message: "Registration successful!",
+      token,
+      userId: newUser._id,
+    });
   } catch (error) {
     console.error("❌ Registration error:", error);
     res
@@ -54,7 +68,8 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.post("/login", async (req, res) => {
+// ===== Login Endpoint =====
+app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -79,6 +94,7 @@ app.post("/login", async (req, res) => {
       success: true,
       message: "Login successful!",
       token,
+      userId: user._id,
     });
   } catch (error) {
     console.error("❌ Login error:", error);
@@ -88,7 +104,9 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.use("/api/tasks", authMiddleware, require("./routes/tasks"));
+// ===== Mount Task Routes =====
+// All /api/tasks endpoints require authentication.
+app.use("/api/tasks", authMiddleware, tasksRoutes);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
