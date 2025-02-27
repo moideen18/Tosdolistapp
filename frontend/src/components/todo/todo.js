@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {getTasks,addTask,updateTask,deleteTask,toggleTaskCompletion,} from "../../api";
+import {
+  getTasks,
+  addTask,
+  updateTask,
+  deleteTask,
+  toggleTaskCompletion,
+} from "../../api";
 import { FaCheck, FaEdit, FaTrash } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -13,21 +19,21 @@ const Todo = () => {
   const [editId, setEditId] = useState(null);
   const navigate = useNavigate();
 
-  // Check for token on mount
+  // ✅ Check for token & fetch tasks
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
       toast.error("Unauthorized! Please log in.");
-      setTimeout(() => navigate("/home"), 2000);
+      setTimeout(() => navigate("/home"), 1500);
       return;
     }
     fetchTasks();
   }, [navigate]);
 
-  // Fetch tasks from API
+  // ✅ Fetch tasks from API
   const fetchTasks = async () => {
     try {
-      const tasks = await getTasks(); // API extracts user from token
+      const tasks = await getTasks();
       setTasks(tasks);
     } catch (error) {
       console.error("❌ Error fetching tasks:", error.message);
@@ -35,6 +41,7 @@ const Todo = () => {
     }
   };
 
+  // ✅ Add or Update Task
   const handleAddOrUpdateTask = async () => {
     if (!task.trim()) {
       toast.warning("Task cannot be empty!");
@@ -43,7 +50,7 @@ const Todo = () => {
 
     try {
       if (isEditing) {
-        // Update existing task (updateTask expects taskId and text)
+        // Update existing task
         await updateTask(editId, task);
         setTasks((prevTasks) =>
           prevTasks.map((t) =>
@@ -52,13 +59,13 @@ const Todo = () => {
         );
         toast.success("Task updated successfully!");
       } else {
-        // Add new task (addTask expects task data with a `text` property)
-        const newTask = await addTask({ text: task });
+        // Add new task
+        const newTask = await addTask(task); // ✅ Fixed API call
         setTasks((prevTasks) => [newTask, ...prevTasks]);
         toast.success("Task added successfully!");
       }
 
-      // Reset input and editing state
+      // Reset input
       setTask("");
       setIsEditing(false);
       setEditId(null);
@@ -68,6 +75,7 @@ const Todo = () => {
     }
   };
 
+  // ✅ Delete Task
   const handleDeleteTask = async (id) => {
     try {
       await deleteTask(id);
@@ -79,15 +87,17 @@ const Todo = () => {
     }
   };
 
+  // ✅ Edit Task
   const handleEditTask = (id, text) => {
     setTask(text || "");
     setIsEditing(true);
     setEditId(id);
   };
 
-  const handleCompleteTask = async (id, completed) => {
+  // ✅ Toggle Task Completion
+  const handleCompleteTask = async (id) => {
     try {
-      const updatedTask = await toggleTaskCompletion(id);
+      const updatedTask = await toggleTaskCompletion(id); // ✅ No need to pass 'completed'
       setTasks((prevTasks) =>
         prevTasks.map((t) =>
           t._id === id ? { ...t, completed: updatedTask.completed } : t
@@ -104,15 +114,15 @@ const Todo = () => {
     }
   };
 
-  // In your Todo component or wherever you're handling logout:
-const handleLogout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("userId"); // if stored
-  toast.info("Logging out...");
-  setTimeout(() => navigate("/"), 1500); // Change "/home" to "/"
-};
-  
+  // ✅ Logout Function
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId"); // If stored
+    toast.info("Logging out...");
+    setTimeout(() => navigate("/"), 1500); // Redirect to home
+  };
 
+  // ✅ Handle "Enter" key press
   const handleKeyPress = (event) => {
     if (event.key === "Enter") {
       handleAddOrUpdateTask();
@@ -124,7 +134,9 @@ const handleLogout = () => {
       {/* Navbar with Logout Button */}
       <nav className="navbar">
         <h1>TODO LIST</h1>
-        <button className="logout-btn" onClick={handleLogout}>Logout</button>
+        <button className="logout-btn" onClick={handleLogout}>
+          Logout
+        </button>
       </nav>
 
       <ToastContainer />
@@ -153,7 +165,7 @@ const handleLogout = () => {
                 <div className="btn-group">
                   <button
                     className="complete-btn"
-                    onClick={() => handleCompleteTask(t._id, t.completed)}
+                    onClick={() => handleCompleteTask(t._id)}
                     title="Complete Task"
                   >
                     <FaCheck />

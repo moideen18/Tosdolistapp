@@ -3,117 +3,112 @@ const API_URL = "http://localhost:5000/api"; // Backend URL
 // ✅ Function to get authentication headers safely
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
-  if (!token) {
-    console.warn("⚠️ No token found. User might not be logged in.");
-    return {}; // Return empty object if no token
-  }
-  return { Authorization: `Bearer ${token}` };
+  return token ? { Authorization: `Bearer ${token}` } : {}; // Only return if token exists
 };
 
-// ✅ Get all tasks for the authenticated user
-export const getTasks = async () => {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    throw new Error("No authentication token found. Please log in.");
-  }
-
-  const response = await fetch(`${API_URL}/tasks`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...getAuthHeaders(),
-    },
-  });
-
+// ✅ Handle API response with better error handling
+const handleResponse = async (response) => {
   if (!response.ok) {
-    throw new Error(`Failed to fetch tasks (Status: ${response.status})`);
-  }
-
-  return await response.json();
-};
-
-// ✅ Add a new task (no need to pass userId)
-export const addTask = async (taskData) => {
-  try {
-    const response = await fetch(`${API_URL}/tasks`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...getAuthHeaders(), // Include auth headers for consistency
-      },
-      body: JSON.stringify(taskData), // taskData should be an object, e.g., { text: "Your task text" }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to add task (Status: ${response.status})`);
+    let errorMessage = `Error: ${response.status} ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch (err) {
+      console.error("❌ Failed to parse error response", err);
     }
 
-    return await response.json();
+    if (response.status === 401) {
+      console.warn("🔐 Unauthorized! Logging out...");
+      localStorage.removeItem("token"); // Clear token if expired
+      window.location.href = "/login"; // Redirect to login
+    }
+
+    throw new Error(errorMessage);
+  }
+  return response.json();
+};
+
+// ✅ Fetch all tasks
+export const getTasks = async () => {
+  try {
+    const response = await fetch(`${API_URL}/tasks`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    });
+
+    return await handleResponse(response);
   } catch (error) {
-    console.error("❌ Error adding task:", error.message);
+    console.error("❌ Error fetching tasks:", error);
     throw error;
   }
 };
 
-// ✅ Update a task (no need to pass userId)
-export const updateTask = async (taskId, text) => {
-  if (!taskId) {
-    console.error("❌ Missing task ID.");
+// ✅ Add a new task
+export const addTask = async (taskText) => {
+  if (!taskText?.trim()) {
+    console.error("❌ Task text is required.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ text: taskText }),
+    });
+
+    return await handleResponse(response);
+  } catch (error) {
+    console.error("❌ Error adding task:", error);
+    throw error;
+  }
+};
+
+// ✅ Update a task
+export const updateTask = async (taskId, newText) => {
+  if (!taskId || !newText?.trim()) {
+    console.error("❌ Task ID and text are required.");
     return;
   }
 
   try {
     const response = await fetch(`${API_URL}/tasks/${taskId}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        ...getAuthHeaders(),
-      },
-      body: JSON.stringify({ text }),
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ text: newText }),
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to update task (Status: ${response.status})`);
-    }
-
-    return await response.json();
+    return await handleResponse(response);
   } catch (error) {
-    console.error("❌ Error updating task:", error.message);
+    console.error("❌ Error updating task:", error);
     throw error;
   }
 };
 
-// ✅ Delete a task (no need to pass userId)
+// ✅ Delete a task
 export const deleteTask = async (taskId) => {
   if (!taskId) {
-    console.error("❌ Missing task ID.");
+    console.error("❌ Task ID is required.");
     return;
   }
 
   try {
     const response = await fetch(`${API_URL}/tasks/${taskId}`, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        ...getAuthHeaders(),
-      },
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to delete task (Status: ${response.status})`);
-    }
-
-    return await response.json();
+    return await handleResponse(response);
   } catch (error) {
-    console.error("❌ Error deleting task:", error.message);
+    console.error("❌ Error deleting task:", error);
     throw error;
   }
 };
 
-// ✅ Toggle task completion (no need to pass userId)
+// ✅ Toggle task completion
 export const toggleTaskCompletion = async (taskId) => {
   if (!taskId) {
-    console.error("❌ Missing task ID.");
+    console.error("❌ Task ID is required.");
     return;
   }
 
@@ -126,13 +121,11 @@ export const toggleTaskCompletion = async (taskId) => {
       },
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to toggle task completion (Status: ${response.status})`);
-    }
-
-    return await response.json();
+    return await handleResponse(response);
   } catch (error) {
     console.error("❌ Error toggling task completion:", error.message);
     throw error;
   }
 };
+
+// ✅ Export all functions correctly

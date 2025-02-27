@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaEnvelope, FaLock } from "react-icons/fa"; 
+import { FaEnvelope, FaLock } from "react-icons/fa";
 import Navbar from "../Navbar/Navbar";
-import "./Login.css"; 
+import "./Login.css";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,10 +20,18 @@ const Login = () => {
   
       if (response.data.success) {
         console.log("✅ Login successful:", response.data);
-        // Save the token in localStorage
-        localStorage.setItem("token", response.data.token);
-        alert("🎉 Login Successful!");
-        navigate("/todo"); // Redirect to Todo page after login
+        
+        // Check if the user has verified the OTP
+        if (response.data.otpVerified) {
+          // Save the token in localStorage
+          localStorage.setItem("token", response.data.token);
+          alert("🎉 Login Successful!");
+          navigate("/todo"); // Redirect to Todo page after login
+        } else {
+          // OTP is not verified, redirect to OTP verification page
+          alert("⚠️ Please verify your OTP before logging in.");
+          navigate(`/verify-otp?email=${encodeURIComponent(formData.email)}`);
+        }
       } else {
         setError(response.data.message || "❌ Login failed. Try again.");
       }

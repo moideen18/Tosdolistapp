@@ -7,28 +7,54 @@ import "./Register.css";
 
 const Register = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ name: "", email: "", password: "" });
+
+  // State to hold form data
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+
+  // State for error messages & loading status
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState(""); // ✅ Success message state
+
+  // State to control password visibility
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-  const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
+  // Update formData state on input change
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value.trim() });
+  };
 
+  // Toggle between showing and hiding the password
+  const togglePasswordVisibility = () => {
+    setShowPassword((prev) => !prev);
+  };
+
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      console.log("📤 Sending registration request...");
-      const response = await axios.post("http://localhost:5000/api/register", formData);
-      console.log("✅ Registration successful:", response.data);
-      alert("🎉 Registration Successful!");
+    setError("");
+    setMessage(""); // Reset message before new request
+    setLoading(true);
 
-      // Save the token in localStorage
-      localStorage.setItem("token", response.data.token);
-      // Redirect to the Todo page
-      navigate("/todo");
+    try {
+      console.log("📤 Sending registration request...", formData);
+      const response = await axios.post("http://localhost:5000/api/register", formData);
+
+      console.log("✅ Registration successful:", response.data);
+      setMessage("📩 OTP sent to your email! Please verify your account.");
+      alert("📩 OTP sent to your email! Please verify your account.");
+
+      // Redirect to OTP verification page with email
+      navigate(`/verify-otp?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
       console.error("❌ Registration error:", error.response?.data || error.message);
       setError(error.response?.data?.message || "❌ Server error. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -38,6 +64,7 @@ const Register = () => {
       <div className="register-container">
         <h2>Register</h2>
         <form onSubmit={handleSubmit}>
+          {/* Full Name Field */}
           <div className="input-container">
             <FaUser className="icon" />
             <input
@@ -49,6 +76,8 @@ const Register = () => {
               required
             />
           </div>
+
+          {/* Email Field */}
           <div className="input-container">
             <FaEnvelope className="icon" />
             <input
@@ -60,6 +89,8 @@ const Register = () => {
               required
             />
           </div>
+
+          {/* Password Field */}
           <div className="input-container">
             <FaLock className="icon" />
             <input
@@ -70,16 +101,27 @@ const Register = () => {
               onChange={handleChange}
               required
             />
+            {/* Toggle Password Visibility Icon */}
             <span className="toggle-icon" onClick={togglePasswordVisibility}>
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </span>
           </div>
+
+          {/* Display Error Message */}
           {error && <p className="error">{error}</p>}
-          <button type="submit">Sign Up</button>
+          {/* Display Success Message */}
+          {message && <p className="success">{message}</p>}
+
+          <button type="submit" disabled={loading}>
+            {loading ? "Signing Up..." : "Sign Up"}
+          </button>
         </form>
+
         <p className="login-link">
           Already have an account?{" "}
-          <span className="link-text" onClick={() => navigate("/login")}>Login</span>
+          <span className="link-text" onClick={() => navigate("/login")}>
+            Login
+          </span>
         </p>
       </div>
     </>

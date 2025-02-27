@@ -1,84 +1,114 @@
 const express = require("express");
 const User = require("../models/user");
+const authMiddleware = require("../middleware/auth");
+
 const router = express.Router();
 
-// GET all tasks for a user
-router.get('/users/:userId/tasks', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const user = await User.findById(userId);
-        
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-        
-        if (!user.tasks || user.tasks.length === 0) {
-            return res.status(404).json({ message: "No tasks found for this user" });
-        }
-        
-        res.json(user.tasks);
-    } catch (error) {
-        res.status(500).json({ message: "Server Error", error: error.message });
+// ✅ GET all tasks for a user
+router.get("/users/:userId/tasks", authMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (req.user.id.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized access" });
     }
+
+    const user = await User.findById(userId).select("tasks");
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({ success: true, tasks: user.tasks });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
 });
 
-// CREATE a new task for a user
-router.post('/users/:userId/tasks', async (req, res) => {
+// ✅ CREATE a new task for a user
+router.post("/users/:userId/tasks", authMiddleware, async (req, res) => {
+  try {
     const { text } = req.body;
-    if (!text) {
-        return res.status(400).json({ message: "Task text is required" });
+    const { userId } = req.params;
+
+    if (req.user.id.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized access" });
     }
 
-    try {
-        const user = await User.findById(req.params.userId);
-        if (!user) return res.status(404).json({ message: "User not found" });
-
-        const newTask = { text };
-        user.tasks.push(newTask);
-        await user.save();
-
-        res.status(201).json(newTask);
-    } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+    if (!text || typeof text !== "string") {
+      return res.status(400).json({ success: false, message: "Task text is required and must be a string" });
     }
+
+    const newTask = { text, completed: false };
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $push: { tasks: newTask } },
+      { new: true, select: "tasks" }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.status(201).json({ success: true, message: "Task added successfully", task: newTask });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
 });
 
-// UPDATE a specific task
-router.put('/users/:userId/tasks/:taskId', async (req, res) => {
-    const { text } = req.body;
-    if (!text) {
-        return res.status(400).json({ message: "Task text is required" });
+// ✅ UPDATE a specific task
+router.put("/users/:userId/tasks/:taskId", authMiddleware, async (req, res) => {
+  try {
+    const { text, completed } = req.body;
+    const { userId, taskId } = req.params;
+
+    if (req.user.id.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized access" });
     }
 
-    try {
-        const user = await User.findById(req.params.userId);
-        if (!user) return res.status(404).json({ message: "User not found" });
-
-        const task = user.tasks.id(req.params.taskId);
-        if (!task) return res.status(404).json({ message: "Task not found" });
-
-        task.text = text;
-        await user.save();
-
-        res.json(task);
-    } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
     }
+
+    const task = user.tasks.id(taskId);
+    if (!task) {
+      return res.status(404).json({ success: false, message: "Task not found" });
+    }
+
+    if (text) task.text = text;
+    if (completed !== undefined) task.completed = completed;
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Task updated successfully", task });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
 });
 
-// DELETE a specific task
-router.delete('/users/:userId/tasks/:taskId', async (req, res) => {
-    try {
-        const user = await User.findById(req.params.userId);
-        if (!user) return res.status(404).json({ message: "User not found" });
+// ✅ DELETE a specific task
+router.delete("/users/:userId/tasks/:taskId", authMiddleware, async (req, res) => {
+  try {
+    const { userId, taskId } = req.params;
 
-        user.tasks = user.tasks.filter(task => task._id.toString() !== req.params.taskId);
-        await user.save();
-
-        res.json({ message: "Task deleted successfully" });
-    } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+    if (req.user.id.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized access" });
     }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { tasks: { _id: taskId } } },
+      { new: true, select: "tasks" }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({ success: true, message: "Task deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
 });
 
 module.exports = router;
